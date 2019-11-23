@@ -41,14 +41,13 @@ predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
 
 # 0 for device webcam default
 # 1 for external webcam
-vs = cv.VideoCapture(0)
+vs = cv.VideoCapture(1)
 
 if not vs.isOpened():
     vs.release()
-    exit
+
 while True:
 
-        break
 
         # Delay for camera to stabilize
         time.sleep(1.0)
