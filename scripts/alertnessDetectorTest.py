@@ -10,12 +10,12 @@ from imutils import face_utils
 from threading import Thread
 
 EYE_AR_THRESH = 0.28
-EYE_AR_CONSEC_FRAMES = 40
+EYE_AR_CONSEC_FRAMES = 38
 
 COUNTER = 0
 ALARM_ON = False
 
-frequency = 2750  # Set Frequency (Hz)
+frequency = 2600  # Set Frequency (Hz)
 duration = 333  # Set Duration (ms)
 
 def alarm():
@@ -32,84 +32,99 @@ def eye_aspect_ratio(eye):
 	
     return ear
 
-# Initialize dlib face detector
+def closedEyeDetector(vs):
+    
+    # Initialize dlib face detector
+    detector = dlib.get_frontal_face_detector()
+    predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
 
-detector = dlib.get_frontal_face_detector()
-predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
+    # grab the indexes of the facial landmarks for the left and
+    # right eye, respectively
+    (lStart, lEnd) = face_utils.FACIAL_LANDMARKS_IDXS["left_eye"]
+    (rStart, rEnd) = face_utils.FACIAL_LANDMARKS_IDXS["right_eye"]
+    # loop over frames from the video stream
+    while True:
 
-# grab the indexes of the facial landmarks for the left and
-# right eye, respectively
-(lStart, lEnd) = face_utils.FACIAL_LANDMARKS_IDXS["left_eye"]
-(rStart, rEnd) = face_utils.FACIAL_LANDMARKS_IDXS["right_eye"]
+        if not vs.isOpened():
+            vs.release()
+            print("Camera Error")
+            break
 
-# Start video stream
-vs = vs = cv.VideoCapture(1)
-time.sleep(0.3)
+        # Resize recolour captured frame
+        ret, frame = vs.read()
+        frame = imutils.resize(frame, width=450)
+        gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
 
-# loop over frames from the video stream
-while True:
+        # Detect face(s)
+        rects = detector(gray, 0)
 
-    # Resize recolour captured frame
-    ret, frame = vs.read()
-    frame = imutils.resize(frame, width=450)
-    gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+        # loop through faces
+        for rect in rects:
+            
+            # Get facial landmarks
+            shape = predictor(gray, rect)
+            shape = face_utils.shape_to_np(shape)
 
-	# Detect face(s)
-    rects = detector(gray, 0)
+            # Get aspect ratios
+            leftEye = shape[lStart:lEnd]
+            rightEye = shape[rStart:rEnd]
+            leftEAR = eye_aspect_ratio(leftEye)
+            rightEAR = eye_aspect_ratio(rightEye)
 
-	# loop through faces
-    for rect in rects:
-		
-        # Get facial landmarks
-        shape = predictor(gray, rect)
-        shape = face_utils.shape_to_np(shape)
+            # Average ear value
+            ear = (leftEAR + rightEAR) / 2.0
 
-        # Get aspect ratios
-        leftEye = shape[lStart:lEnd]
-        rightEye = shape[rStart:rEnd]
-        leftEAR = eye_aspect_ratio(leftEye)
-        rightEAR = eye_aspect_ratio(rightEye)
+            leftEyeHull = cv.convexHull(leftEye)
+            rightEyeHull = cv.convexHull(rightEye)
 
-		# Average ear value
-        ear = (leftEAR + rightEAR) / 2.0
+            # Display outline of detected eyes
+            cv.drawContours(frame, [leftEyeHull], -1, (0, 255, 0), 1)   
+            cv.drawContours(frame, [rightEyeHull], -1, (0, 255, 0), 1)
 
-        leftEyeHull = cv.convexHull(leftEye)
-        rightEyeHull = cv.convexHull(rightEye)
+            # Checking ear ratio
+            if ear < EYE_AR_THRESH:
+                COUNTER += 1
 
-        # Display outline of detected eyes
-        cv.drawContours(frame, [leftEyeHull], -1, (0, 255, 0), 1)   
-        cv.drawContours(frame, [rightEyeHull], -1, (0, 255, 0), 1)
+                # Sounds alarm after specified counter overflow
+                if COUNTER >= EYE_AR_CONSEC_FRAMES:
+                    # Turns alarm on
+                    if not ALARM_ON:
+                        ALARM_ON = True
 
-		# Checking ear ratio
-        if ear < EYE_AR_THRESH:
-            COUNTER += 1
+                        #Plays winsound in background
+                        t = Thread(target=alarm)
+                        t.daemon = True
+                        t.start()
 
-            # Sounds alarm after specified counter overflow
-            if COUNTER >= EYE_AR_CONSEC_FRAMES:
-				# Turns alarm on
-                if not ALARM_ON:
-                    ALARM_ON = True
+                # Prints alert
+                cv.putText(frame, "ALERT", (10, 30),cv.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
 
-                    #Plays winsound in background
-                    t = Thread(target=alarm)
-                    t.daemon = True
-                    t.start()
+            else:
+                COUNTER = 0
+                ALARM_ON = False
 
-			# Prints alert
-            cv.putText(frame, "ALERT", (10, 30),cv.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+            # Prints current ear value
+            cv.putText(frame, "EAR: {:.2f}".format(ear), (300, 30),cv.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+    
+        # Opens window
+        cv.imshow("Frame", frame)
+        #Any key breaks loop
+        if cv.waitKey(1) >= 0:
+            vs.release()
+            break
+    # Destroy any leftover windows
+    cv.destroyAllWindows()
 
-        else:
-            COUNTER = 0
-            ALARM_ON = False
+def main():
 
-        # Prints current ear value
-        cv.putText(frame, "EAR: {:.2f}".format(ear), (300, 30),cv.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
- 
-	# Opens window
-    cv.imshow("Frame", frame)
-    #Any key breaks loop
-    if cv.waitKey(1) >= 0:
-        vs.release()
-        break
-# Destroy any leftover windows
-cv.destroyAllWindows()
+    # Start video stream
+    vs = cv.VideoCapture(1)
+    if not vs.isOpened():
+        vs = cv.VideoCapture(0)
+    time.sleep(0.3)
+    
+    closedEyeDetector(vs)
+
+
+if __name__ == '__main__':
+    main()
