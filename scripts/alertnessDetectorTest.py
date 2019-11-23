@@ -351,8 +351,7 @@ def closedEyeDetector():
 
 def main():
     
-    while(1):
-        closedEyeDetector()
+    closedEyeDetector()
     #Process(target = closedEyeDetector).start()
     #Process(target = headPoseEst).start()
     
