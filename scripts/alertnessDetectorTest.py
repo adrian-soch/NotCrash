@@ -349,7 +349,7 @@ def closedEyeDetector():
     cv.destroyAllWindows()
 
 
-def gathersounds():
+def main():
     
     while(1):
         closedEyeDetector()
