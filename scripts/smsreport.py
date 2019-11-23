@@ -7,7 +7,7 @@ from connections import *
 def report():
     client = pymongo.MongoClient(mongourl)
     db = client.notcrash
-    cursor = db.distractions.find({}, { 'Reason': 1, 'Incident': 1, 'Time': 1, '_id': 0 })
+    cursor = db.distractions.find({}, { 'What Was Said': 1, 'Incident': 1, 'Time': 1, '_id': 0 })
     lis = []
     for items in cursor:
         lis.append(items)

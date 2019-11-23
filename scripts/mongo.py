@@ -7,7 +7,7 @@ def runmongo(sound):
     db = client.notcrash
     count = int(db.distractions.count()) + 1
     time = str(datetime.datetime.now())
-    db.distractions.insert_one({"Reason": sound, "Incident": count, "Time": time}) 
+    db.distractions.insert_one({"What Was Said": sound, "Incident": count, "Time": time}) 
 
 #Get Audio and Run Above Function
 def insertdata():
