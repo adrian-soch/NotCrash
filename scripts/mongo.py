@@ -14,3 +14,5 @@ def insertdata():
     r, audio = getaudio()
     runmongo(processaudio(r, audio))
 
+insertdata()
+

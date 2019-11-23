@@ -41,8 +41,8 @@ def processaudio(r,audio):
         print("Google Cloud Speech could not understand audio")
     except sr.RequestError as e:
         print("Could not request results from Google Cloud Speech service; {0}".format(e))
-    speak = wincl.Dispatch("SAPI.SpVoice")
-    speak.Speak("You said "+sound)
+    #speak = wincl.Dispatch("SAPI.SpVoice")
+    #speak.Speak("You said "+sound)
     return (str(sound))
 
 #Insert Data Into MongoDB
@@ -83,6 +83,15 @@ def ending():
     if (len(report())%1 == 0):
         sendSMS("6478702797", report())
 
+#Added stuff
+def stepone():
+    r, audio = getaudio()
+    sound = processaudio(r, audio)
+
+    # for item in sound.split():
+    #     if item.lower() == 'awake':
+    #         break
+        
 
 def alarm():
     # Windows machine emits the specific frequency for the specified duration
@@ -308,9 +317,8 @@ def closedEyeDetector():
             # Checking ear ratio
             if ear < EYE_AR_THRESH:
                 COUNTER += 1
-                CHECKER = 0
                 # Sounds alarm after specified counter overflow
-                while(COUNTER >= EYE_AR_CONSEC_FRAMES and CHECKER == 0):
+                while(COUNTER >= EYE_AR_CONSEC_FRAMES):
                     # Turns alarm on
                     ALARM_ON = True
 
@@ -319,18 +327,11 @@ def closedEyeDetector():
                     t.daemon = True
                     t.start()
 
-                    
                     # Prints alert
                     cv.putText(frame, "ALERT", (10, 30),cv.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-                    r, audio = getaudio()
-                    sound = processaudio(r, audio)
 
-                    for item in sound.split():
-                        if item.lower() == 'awake':
-                            CHECKER = 1
-                            break
-                        else:
-                            continue
+                    stepone()
+                    
                         
             else:
                 COUNTER = 0
