@@ -1,291 +1,150 @@
-import numpy as np
-import cv2 as cv
-import dlib
-import time
-import imutils
-import winsound
-import win32com.client as wincl
-import speech_recognition as sr
-import pymongo
-from lib import lib
-import datetime
-from connections import *
-from scipy.spatial import distance
+# USAGE
+# python detect_drowsiness.py --shape-predictor shape_predictor_68_face_landmarks.dat
+# python detect_drowsiness.py --shape-predictor shape_predictor_68_face_landmarks.dat --alarm alarm.wav
+
+# import the necessary packages
+from scipy.spatial import distance as dist
 from imutils import face_utils
+from imutils import VideoStream
 from threading import Thread
-from multiprocessing import Process
+import numpy as np
 
-EYE_AR_THRESH = 0.28
-EYE_AR_CONSEC_FRAMES = 38
+import imutils
+import time
+import dlib
+import cv2
 
+def alarm():
+	winsound.Beep(2600, 1000)
+
+def eye_aspect_ratio(eye):
+	# compute the euclidean distances between the two sets of
+	# vertical eye landmarks (x, y)-coordinates
+	A = dist.euclidean(eye[1], eye[5])
+	B = dist.euclidean(eye[2], eye[4])
+
+	# compute the euclidean distance between the horizontal
+	# eye landmark (x, y)-coordinates
+	C = dist.euclidean(eye[0], eye[3])
+
+	# compute the eye aspect ratio
+	ear = (A + B) / (2.0 * C)
+
+	# return the eye aspect ratio
+	return ear
+ 
+# construct the argument parse and parse the arguments
+
+ 
+# define two constants, one for the eye aspect ratio to indicate
+# blink and then a second constant for the number of consecutive
+# frames the eye must be below the threshold for to set off the
+# alarm
+EYE_AR_THRESH = 0.3
+EYE_AR_CONSEC_FRAMES = 48
+
+# initialize the frame counter as well as a boolean used to
+# indicate if the alarm is going off
 COUNTER = 0
 ALARM_ON = False
 
-frequency = 2600  # Set Frequency (Hz)
-duration = 333  # Set Duration (ms)
-   
-        
+# initialize dlib's face detector (HOG-based) and then create
+# the facial landmark predictor
+print("[INFO] loading facial landmark predictor...")
+detector = dlib.get_frontal_face_detector()
+predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
 
-def alarm():
-    # Windows machine emits the specific frequency for the specified duration
-    winsound.Beep(frequency, duration)
+# grab the indexes of the facial landmarks for the left and
+# right eye, respectively
+(lStart, lEnd) = face_utils.FACIAL_LANDMARKS_IDXS["left_eye"]
+(rStart, rEnd) = face_utils.FACIAL_LANDMARKS_IDXS["right_eye"]
 
-def eye_aspect_ratio(eye):
-    A = distance.euclidean(eye[1], eye[5])
-    B = distance.euclidean(eye[2], eye[4])
-    #Euclidean distance
-    C = distance.euclidean(eye[0], eye[3]) 
-	#Eye aspect ratio
-    ear = (A + B) / (2.0 * C)
-	
-    return ear
+# start the video stream thread
+print("[INFO] starting video stream thread...")
+vs = VideoStream(1).start()
+time.sleep(1.0)
 
+# loop over frames from the video stream
+while True:
+	# grab the frame from the threaded video file stream, resize
+	# it, and convert it to grayscale
+	# channels)
+	frame = vs.read()
+	frame = imutils.resize(frame, width=450)
+	gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-def headPoseEst():
+	# detect faces in the grayscale frame
+	rects = detector(gray, 0)
 
-    # Start video stream
-    vs = cv.VideoCapture(1)
-    if not vs.isOpened():
-        vs = cv.VideoCapture(0)
-    time.sleep(0.3)
+	# loop over the face detections
+	for rect in rects:
+		# determine the facial landmarks for the face region, then
+		# convert the facial landmark (x, y)-coordinates to a NumPy
+		# array
+		shape = predictor(gray, rect)
+		shape = face_utils.shape_to_np(shape)
 
-    # Initialize dlib face detector
-    detector = dlib.get_frontal_face_detector()
-    predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
+		# extract the left and right eye coordinates, then use the
+		# coordinates to compute the eye aspect ratio for both eyes
+		leftEye = shape[lStart:lEnd]
+		rightEye = shape[rStart:rEnd]
+		leftEAR = eye_aspect_ratio(leftEye)
+		rightEAR = eye_aspect_ratio(rightEye)
 
-    image_points = np.array([
-                            (359, 391),     # Nose tip 34
-                            (399, 561),     # Chin 9
-                            (337, 297),     # Left eye left corner 37
-                            (513, 301),     # Right eye right corne 46
-                            (345, 465),     # Left Mouth corner 49
-                            (453, 469)      # Right mouth corner 55
-                        ], dtype="double")
+		# average the eye aspect ratio together for both eyes
+		ear = (leftEAR + rightEAR) / 2.0
 
-    # 3D model points.
-    model_points = np.array([
-                            (0.0, 0.0, 0.0),             # Nose tip 34
-                            (0.0, -330.0, -65.0),        # Chin 9
-                            (-225.0, 170.0, -135.0),     # Left eye left corner 37
-                            (225.0, 170.0, -135.0),      # Right eye right corne 46
-                            (-150.0, -150.0, -125.0),    # Left Mouth corner 49
-                            (150.0, -150.0, -125.0)      # Right mouth corner 55
+		# compute the convex hull for the left and right eye, then
+		# visualize each of the eyes
+		leftEyeHull = cv2.convexHull(leftEye)
+		rightEyeHull = cv2.convexHull(rightEye)
+		cv2.drawContours(frame, [leftEyeHull], -1, (0, 255, 0), 1)
+		cv2.drawContours(frame, [rightEyeHull], -1, (0, 255, 0), 1)
 
-                        ])
+		# check to see if the eye aspect ratio is below the blink
+		# threshold, and if so, increment the blink frame counter
+		if ear < EYE_AR_THRESH:
+			COUNTER += 1
 
-    while True:
+			# if the eyes were closed for a sufficient number of
+			# then sound the alarm
+			if COUNTER >= EYE_AR_CONSEC_FRAMES:
+				# if the alarm is not on, turn it on
+				if not ALARM_ON:
+					ALARM_ON = True
 
-        if not vs.isOpened():
-            vs.release()
-            print("Camera Error")
-            break
+					# check to see if an alarm file was supplied,
+					# and if so, start a thread to have the alarm
+					# sound played in the background
+					
+					t = Thread(target=alarm)
+					t.deamon = True
+					t.start()
 
-        ret, frame = vs.read()
-        gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
-        frame = imutils.resize(frame, width=1024, height=576)
-        size = gray.shape
+				# draw an alarm on the frame
+				cv2.putText(frame, "DROWSINESS ALERT!", (10, 30),
+					cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
 
-        # detect faces in the grayscale frame
-        rects = detector(gray, 0)
+		# otherwise, the eye aspect ratio is not below the blink
+		# threshold, so reset the counter and alarm
+		else:
+			COUNTER = 0
+			ALARM_ON = False
 
-        # check to see if a face was detected, and if so, draw the total
-        # number of faces on the frame
-        if len(rects) > 0:
-                text = "{} face(s) found".format(len(rects))
-                cv.putText(frame, text, (10, 20), cv.FONT_HERSHEY_SIMPLEX,0.5, (0, 0, 255), 2)
-
-        # loop over the face detections
-        for rect in rects:
-                # compute the bounding box of the face and draw it on the
-                # frame
-                        (bX, bY, bW, bH) = face_utils.rect_to_bb(rect)
-                        cv.rectangle(frame, (bX, bY), (bX + bW, bY + bH),(0, 255, 0), 1)
-                # determine the facial landmarks for the face region, then
-                # convert the facial landmark (x, y)-coordinates to a NumPy
-                # array
-                        shape = predictor(gray, rect)
-                        shape = face_utils.shape_to_np(shape)
-                # loop over the (x, y)-coordinates for the facial landmarks
-                # and draw each of them
-                        for (i, (x, y)) in enumerate(shape):
-                                if i == 33:
-                                        #something to our key landmarks
-                    # save to our new key point list
-                    # i.e. keypoints = [(i,(x,y))]
-                                        image_points[0] = np.array([x,y],dtype='double')
-                    # write on frame in Green
-                                        cv.circle(frame, (x, y), 1, (0, 255, 0), -1)
-                                        cv.putText(frame, str(i + 1), (x - 10, y - 10),cv.FONT_HERSHEY_SIMPLEX, 0.35, (0, 255, 0), 1)
-                                elif i == 8:
-                    #something to our key landmarks
-                    # save to our new key point list
-                    # i.e. keypoints = [(i,(x,y))]
-                                        image_points[1] = np.array([x,y],dtype='double')
-                    # write on frame in Green
-                                        cv.circle(frame, (x, y), 1, (0, 255, 0), -1)
-                                        cv.putText(frame, str(i + 1), (x - 10, y - 10),cv.FONT_HERSHEY_SIMPLEX, 0.35, (0, 255, 0), 1)
-                                elif i == 36:
-                                        #something to our key landmarks
-                                        # save to our new key point list
-                                        # i.e. keypoints = [(i,(x,y))]
-                                        image_points[2] = np.array([x,y],dtype='double')
-                                        # write on frame in Green
-                                        cv.circle(frame, (x, y), 1, (0, 255, 0), -1)
-                                        cv.putText(frame, str(i + 1), (x - 10, y - 10),cv.FONT_HERSHEY_SIMPLEX, 0.35, (0, 255, 0), 1)
-                                elif i == 45:
-                                        #something to our key landmarks
-                    # save to our new key point list
-                    # i.e. keypoints = [(i,(x,y))]
-                                        image_points[3] = np.array([x,y],dtype='double')
-                    # write on frame in Green
-                                        cv.circle(frame, (x, y), 1, (0, 255, 0), -1)
-                                        cv.putText(frame, str(i + 1), (x - 10, y - 10),cv.FONT_HERSHEY_SIMPLEX, 0.35, (0, 255, 0), 1)
-                                elif i == 48:
-                    #something to our key landmarks
-                    # save to our new key point list
-                    # i.e. keypoints = [(i,(x,y))]
-                                        image_points[4] = np.array([x,y],dtype='double')
-                    # write on frame in Green
-                                        cv.circle(frame, (x, y), 1, (0, 255, 0), -1)
-                                        cv.putText(frame, str(i + 1), (x - 10, y - 10),cv.FONT_HERSHEY_SIMPLEX, 0.35, (0, 255, 0), 1)
-                                elif i == 54:
-                    #something to our key landmarks
-                    # save to our new key point list
-                    # i.e. keypoints = [(i,(x,y))]
-                                        image_points[5] = np.array([x,y],dtype='double')
-                    # write on frame in Green
-                                        cv.circle(frame, (x, y), 1, (0, 255, 0), -1)
-                                        cv.putText(frame, str(i + 1), (x - 10, y - 10),cv.FONT_HERSHEY_SIMPLEX, 0.35, (0, 255, 0), 1)
-                                else:
-                    #everything to all other landmarks
-                    # write on frame in Red
-                                        cv.circle(frame, (x, y), 1, (0, 0, 255), -1)
-                                        cv.putText(frame, str(i + 1), (x - 10, y - 10),cv.FONT_HERSHEY_SIMPLEX, 0.35, (0, 0, 255), 1)
-                        focal_length = size[1]
-                        center = (size[1]/2, size[0]/2)
-                        camera_matrix = np.array([[focal_length,0,center[0]],[0, focal_length, center[1]],[0,0,1]], dtype="double")
-
-                        #print "Camera Matrix :\n {0}".format(camera_matrix)
-
-                        dist_coeffs = np.zeros((4,1)) # Assuming no lens distortion
-                        (success, rotation_vector, translation_vector) = cv.solvePnP(model_points, image_points, camera_matrix, dist_coeffs, flags=cv.SOLVEPNP_ITERATIVE)#flags=cv.CV_ITERATIVE)
-
-                        #print "Rotation Vector:\n {0}".format(rotation_vector)
-                        #print "Translation Vector:\n {0}".format(translation_vector)
-                        # Project a 3D point (0, 0 , 1000.0) onto the image plane
-                        # We use this to draw a line sticking out of the nose_end_point2D
-                        (nose_end_point2D, jacobian) = cv.projectPoints(np.array([(0.0, 0.0, 1000.0)]),rotation_vector, translation_vector, camera_matrix, dist_coeffs)
-                        for p in image_points:
-                                cv.circle(frame, (int(p[0]), int(p[1])), 3, (0,0,255), -1)
-
-                        p1 = ( int(image_points[0][0]), int(image_points[0][1]))
-                        p2 = ( int(nose_end_point2D[0][0][0]), int(nose_end_point2D[0][0][1]))
-
-                        cv.line(frame, p1, p2, (255,0,0), 2)
-        # Opens window
-        cv.imshow("Frame2", frame)
-        #Any key breaks loop
-        if cv.waitKey(1) >= 0:
-            vs.release()
-            break
-    # Destroy any leftover windows
-    cv.destroyAllWindows()
-
+		# draw the computed eye aspect ratio on the frame to help
+		# with debugging and setting the correct eye aspect ratio
+		# thresholds and frame counters
+		cv2.putText(frame, "EAR: {:.2f}".format(ear), (300, 30),
+			cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
  
-def closedEyeDetector():
-    
-    # Start video stream
-    vs = cv.VideoCapture(1)
-    if not vs.isOpened():
-        vs = cv.VideoCapture(0)
-    time.sleep(0.3)
+	# show the frame
+	cv2.imshow("Frame", frame)
+	key = cv2.waitKey(1) & 0xFF
+ 
+	# if the `q` key was pressed, break from the loop
+	if key == ord("q"):
+		break
 
-    # Initialize dlib face detector
-    detector = dlib.get_frontal_face_detector()
-    predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
-
-    # grab the indexes of the facial landmarks for the left and
-    # right eye, respectively
-    (lStart, lEnd) = face_utils.FACIAL_LANDMARKS_IDXS["left_eye"]
-    (rStart, rEnd) = face_utils.FACIAL_LANDMARKS_IDXS["right_eye"]
-    # loop over frames from the video stream
-    while True:
-
-        if not vs.isOpened():
-            vs.release()
-            print("Camera Error")
-            break
-
-        # Resize recolour captured frame
-        ret, frame = vs.read()
-        frame = imutils.resize(frame, width=450)
-        gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
-
-        # Detect face(s)
-        rects = detector(gray, 0)
-
-        # loop through faces
-        for rect in rects:
-            
-            # Get facial landmarks
-            shape = predictor(gray, rect)
-            shape = face_utils.shape_to_np(shape)
-
-            # Get aspect ratios
-            leftEye = shape[lStart:lEnd]
-            rightEye = shape[rStart:rEnd]
-            leftEAR = eye_aspect_ratio(leftEye)
-            rightEAR = eye_aspect_ratio(rightEye)
-
-            # Average ear value
-            ear = (leftEAR + rightEAR) / 2.0
-
-            leftEyeHull = cv.convexHull(leftEye)
-            rightEyeHull = cv.convexHull(rightEye)
-
-            # Display outline of detected eyes
-            cv.drawContours(frame, [leftEyeHull], -1, (0, 255, 0), 1)   
-            cv.drawContours(frame, [rightEyeHull], -1, (0, 255, 0), 1)
-
-            # Checking ear ratio
-            if ear < EYE_AR_THRESH:
-                COUNTER += 1
-                # Sounds alarm after specified counter overflow
-                while(COUNTER >= EYE_AR_CONSEC_FRAMES):
-                    # Turns alarm on
-                    ALARM_ON = True
-
-                    #Plays winsound in background
-                    t = Thread(target=alarm)
-                    t.daemon = True
-                    t.start()
-
-                    # Prints alert
-                    cv.putText(frame, "ALERT", (10, 30),cv.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-                    
-                        
-            else:
-                COUNTER = 0
-                ALARM_ON = False
-
-            # Prints current ear value
-            cv.putText(frame, "EAR: {:.2f}".format(ear), (300, 30),cv.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-    
-        # Opens window
-        cv.imshow("Frame", frame)
-        #Any key breaks loop
-        if cv.waitKey(1) >= 0:
-            vs.release()
-            break
-    # Destroy any leftover windows
-    cv.destroyAllWindows()
-
-
-def main():
-    
-    closedEyeDetector()
-    #Process(target = closedEyeDetector).start()
-    #Process(target = headPoseEst).start()
-    
-if __name__ == '__main__':
-    main()
+# do a bit of cleanup
+cv2.destroyAllWindows()
+vs.stop()
