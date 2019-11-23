@@ -34,7 +34,18 @@ def eye_aspect_ratio(eye):
     return ear
 
 
-def headPoseEst(vs, detector, predictor):
+def headPoseEst():
+
+    # Start video stream
+    vs = cv.VideoCapture(1)
+    if not vs.isOpened():
+        vs = cv.VideoCapture(0)
+    time.sleep(0.3)
+
+    # Initialize dlib face detector
+    detector = dlib.get_frontal_face_detector()
+    predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
+
     image_points = np.array([
                             (359, 391),     # Nose tip 34
                             (399, 561),     # Chin 9
@@ -174,7 +185,17 @@ def headPoseEst(vs, detector, predictor):
     cv.destroyAllWindows()
 
  
-def closedEyeDetector(vs, detector, predictor):
+def closedEyeDetector():
+    
+    # Start video stream
+    vs = cv.VideoCapture(1)
+    if not vs.isOpened():
+        vs = cv.VideoCapture(0)
+    time.sleep(0.3)
+
+    # Initialize dlib face detector
+    detector = dlib.get_frontal_face_detector()
+    predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
 
     # grab the indexes of the facial landmarks for the left and
     # right eye, respectively
@@ -255,21 +276,10 @@ def closedEyeDetector(vs, detector, predictor):
 
 
 def main():
-
-    # Initialize dlib face detector
-    detector = dlib.get_frontal_face_detector()
-    predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
-
-    # Start video stream
-    vs = cv.VideoCapture(1)
-    if not vs.isOpened():
-        vs = cv.VideoCapture(0)
-    time.sleep(0.3)
-    
-    #Thread(target = closedEyeDetector(vs, detector, predictor)).start
-    #Thread(target = headPoseEst(vs, detector, predictor)).start
-    Process(target = closedEyeDetector(vs, detector, predictor),daemon=True).start
-    Process(target = headPoseEst(vs, detector, predictor)).start
+   
+    closedEyeDetector()
+    #Process(target = closedEyeDetector).start()
+    #Process(target = headPoseEst).start()
     
 if __name__ == '__main__':
     main()
