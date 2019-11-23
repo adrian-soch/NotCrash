@@ -26,8 +26,5 @@ def processaudio(r,audio):
     speak.Speak("You said "+sound)
     return (str(sound))
 
-    # for item in sound.split():
-    #     if item.lower() == 'awake':
-    #         return("User is Awake")
 
 

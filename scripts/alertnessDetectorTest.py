@@ -4,7 +4,12 @@ import dlib
 import time
 import imutils
 import winsound
-
+import win32com.client as wincl
+import speech_recognition as sr
+import pymongo
+from lib import lib
+import datetime
+from connections import *
 from scipy.spatial import distance
 from imutils import face_utils
 from threading import Thread
@@ -18,6 +23,66 @@ ALARM_ON = False
 
 frequency = 2600  # Set Frequency (Hz)
 duration = 333  # Set Duration (ms)
+
+# Obtain Audio From Microphone
+def getaudio():
+    r = sr.Recognizer()
+    with sr.Microphone() as source:
+        print("Say something!")
+        audio = r.listen(source)
+    return r,audio
+
+# Use Google Cloud To Process Data
+def processaudio(r,audio):
+    try:
+        sound = str(r.recognize_google_cloud(audio, credentials_json=GOOGLE_CLOUD_SPEECH_CREDENTIALS))
+        print("Google Cloud Speech Heard " + sound)
+    except sr.UnknownValueError:
+        print("Google Cloud Speech could not understand audio")
+    except sr.RequestError as e:
+        print("Could not request results from Google Cloud Speech service; {0}".format(e))
+    speak = wincl.Dispatch("SAPI.SpVoice")
+    speak.Speak("You said "+sound)
+    return (str(sound))
+
+#Insert Data Into MongoDB
+def runmongo(sound):
+    client = pymongo.MongoClient(mongourl)
+    db = client.notcrash
+    count = int(db.distractions.count()) + 1
+    time = str(datetime.datetime.now())
+    db.distractions.insert_one({"What Was Said": sound, "Incident": count, "Time": time}) 
+
+#Get Audio and Run Above Function
+def insertdata():
+    r, audio = getaudio()
+    runmongo(processaudio(r, audio))
+
+#Generate Report
+def report():
+    client = pymongo.MongoClient(mongourl)
+    db = client.notcrash
+    cursor = db.distractions.find({}, { 'What Was Said': 1, 'Incident': 1, 'Time': 1, '_id': 0 })
+    lis = []
+    for items in cursor:
+        lis.append(items)
+    return lis
+
+#Send the text message
+def sendSMS(cell, lis):
+    lib = lib(token=stdlib)
+    sms = lib.utils.sms["@1.0.11"]
+    message = 'Your Driving Details Are Below: \n \n'
+    for items in lis:
+        message = '\n'*2 + message + str(items) + '\n'*2
+    result = sms(to = cell, body = message)
+
+#Main Function
+def ending():
+    insertdata()
+    if (len(report())%1 == 0):
+        sendSMS("6478702797", report())
+
 
 def alarm():
     # Windows machine emits the specific frequency for the specified duration
@@ -243,21 +308,30 @@ def closedEyeDetector():
             # Checking ear ratio
             if ear < EYE_AR_THRESH:
                 COUNTER += 1
-
+                CHECKER = 0
                 # Sounds alarm after specified counter overflow
-                if COUNTER >= EYE_AR_CONSEC_FRAMES:
+                while(COUNTER >= EYE_AR_CONSEC_FRAMES and CHECKER == 0):
                     # Turns alarm on
-                    if not ALARM_ON:
-                        ALARM_ON = True
+                    ALARM_ON = True
 
-                        #Plays winsound in background
-                        t = Thread(target=alarm)
-                        t.daemon = True
-                        t.start()
+                    #Plays winsound in background
+                    t = Thread(target=alarm)
+                    t.daemon = True
+                    t.start()
 
-                # Prints alert
-                cv.putText(frame, "ALERT", (10, 30),cv.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+                    
+                    # Prints alert
+                    cv.putText(frame, "ALERT", (10, 30),cv.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
 
+                    sound = processaudio(getaudio())
+
+                    for item in sound.split():
+                        if item.lower() == 'awake':
+                            CHECKER = 1
+                            break
+                        else:
+                            continue
+                        
             else:
                 COUNTER = 0
                 ALARM_ON = False
@@ -275,9 +349,10 @@ def closedEyeDetector():
     cv.destroyAllWindows()
 
 
-def main():
-   
-    closedEyeDetector()
+def gathersounds():
+    
+    while(1):
+        closedEyeDetector()
     #Process(target = closedEyeDetector).start()
     #Process(target = headPoseEst).start()
     
