@@ -9,6 +9,7 @@ def runmongo(sound):
     time = str(datetime.datetime.now())
     db.distractions.insert_one({"Reason": sound, "Incident": count, "Time": time}) 
 
+#Get Audio and Run Above Function
 def insertdata():
     r, audio = getaudio()
     runmongo(processaudio(r, audio))

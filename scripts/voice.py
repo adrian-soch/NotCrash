@@ -1,8 +1,9 @@
+#Imports
 import win32com.client as wincl
 import speech_recognition as sr
-from connections import *
 import pymongo
 import datetime
+from connections import *
 
 # Obtain Audio From Microphone
 def getaudio():
