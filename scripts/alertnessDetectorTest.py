@@ -322,8 +322,8 @@ def closedEyeDetector():
                     
                     # Prints alert
                     cv.putText(frame, "ALERT", (10, 30),cv.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-
-                    sound = processaudio(getaudio())
+                    r, audio = getaudio()
+                    sound = processaudio(r, audio)
 
                     for item in sound.split():
                         if item.lower() == 'awake':
