@@ -3,6 +3,8 @@ from lib import lib
 from mongo import *
 from connections import *
 
+lib = lib(token=stdlib)
+
 #Generate Report
 def report():
     client = pymongo.MongoClient(mongourl)
@@ -15,7 +17,6 @@ def report():
 
 #Send the text message
 def sendSMS(cell, lis):
-    lib = lib(token=stdlib)
     sms = lib.utils.sms["@1.0.11"]
     message = 'Your Driving Details Are Below: \n \n'
     for items in lis:
@@ -27,7 +28,6 @@ def ending():
     insertdata()
     if (len(report())%1 == 0):
         sendSMS("6478702797", report())
-
 
 if __name__ == "__main__":
     ending()
