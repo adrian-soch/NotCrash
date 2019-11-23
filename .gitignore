@@ -3,6 +3,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+#Credentials
+scripts/connections.py
+
 # C extensions
 *.so
 

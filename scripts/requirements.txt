@@ -1,0 +1,10 @@
+Dependancies
+oauth2client
+pyaudio
+speechrecognition
+google-cloud-speech
+win32com.client
+pymongo 
+dnspython
+
+

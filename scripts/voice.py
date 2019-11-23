@@ -1,11 +1,3 @@
-#Dependancies:
-#oauth2client
-#pyaudio
-#speechrecognition
-#google-cloud-speech
-#win32com.client
-#pymongo 
-#dnspython
 import win32com.client as wincl
 import speech_recognition as sr
 from connections import *
@@ -23,7 +15,7 @@ def getaudio():
 def processaudio(r,audio):
     try:
         sound = str(r.recognize_google_cloud(audio, credentials_json=GOOGLE_CLOUD_SPEECH_CREDENTIALS))
-        print("Google Cloud Speech thinks you said " + sound)
+        print("Google Cloud Speech Heard " + sound)
     except sr.UnknownValueError:
         print("Google Cloud Speech could not understand audio")
     except sr.RequestError as e:
