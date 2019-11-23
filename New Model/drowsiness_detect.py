@@ -1,6 +1,3 @@
-'''This script detects if a person is drowsy or not,using dlib and eye aspect ratio
-calculations. Uses webcam video feed as input.'''
-
 #Import necessary libraries
 from scipy.spatial import distance
 from imutils import face_utils
@@ -9,6 +6,34 @@ import pygame #For playing sound
 import time
 import dlib
 import cv2
+import threading
+import win32com.client as wincl
+import speech_recognition as sr
+import pymongo
+import datetime
+from connections import *
+
+
+# Use Google Cloud To Process Data
+def getaudio():
+    r = sr.Recognizer()
+    with sr.Microphone() as source:
+        print("Say something!")
+        audio = r.listen(source)
+    try:
+        sound = str(r.recognize_google_cloud(audio, credentials_json=GOOGLE_CLOUD_SPEECH_CREDENTIALS))
+        print("Google Cloud Speech Heard " + sound)
+    except sr.UnknownValueError:
+        print("Google Cloud Speech could not understand audio")
+    except sr.RequestError as e:
+        print("Could not request results from Google Cloud Speech service; {0}".format(e))
+
+    client = pymongo.MongoClient(mongourl)
+    db = client.notcrash
+    count = int(db.distractions.count()) + 1
+    time = str(datetime.datetime.now())
+    db.distractions.insert_one({"What Was Said": sound, "Incident": count, "Time": time}) 
+
 
 #Initialize Pygame and load music
 pygame.mixer.init()
@@ -92,8 +117,11 @@ while(True):
             COUNTER += 1
             #If no. of frames is greater than threshold frames,
             if COUNTER >= EYE_ASPECT_RATIO_CONSEC_FRAMES:
-                pygame.mixer.music.play(-1)
                 cv2.putText(frame, "You are Drowsy", (150,200), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0,0,255), 2)
+                pygame.mixer.music.play(-1)
+                getaudio()
+                COUNTER = 0
+        
         else:
             pygame.mixer.music.stop()
             COUNTER = 0
