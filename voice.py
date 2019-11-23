@@ -3,9 +3,8 @@
 #pyaudio
 #speechrecognition
 #google-cloud-speech
-#pyttsx
-
-import pyttsx3
+#win32com.client
+import win32com.client as wincl
 import speech_recognition as sr
 from apikey import *
 
@@ -25,9 +24,8 @@ def processaudio(r,audio):
         print("Google Cloud Speech could not understand audio")
     except sr.RequestError as e:
         print("Could not request results from Google Cloud Speech service; {0}".format(e))
-    engine = pyttsx3.init()
-    engine.say("You said "+sound)
-    engine.runAndWait()
+    speak = wincl.Dispatch("SAPI.SpVoice")
+    speak.Speak("You said "+sound)
     for item in sound.split():
         if item.lower() == 'awake':
             return("User is Awake")
