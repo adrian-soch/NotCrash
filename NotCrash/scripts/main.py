@@ -25,7 +25,7 @@ def main():
     #Minimum consecutive frames for which eye ratio is below threshold for alarm to be triggered
     EYE_ASPECT_RATIO_CONSEC_FRAMES = 75
 
-    #COunts no. of consecutuve frames below threshold value
+    #Counts no. of consecutuve frames below threshold value
     COUNTER = 0
 
     #Load face cascade which will be used to draw a rectangle around detected faces.
