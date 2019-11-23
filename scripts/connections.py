@@ -1,4 +1,3 @@
-# Recognize Speech Using Google Cloud Speech
 GOOGLE_CLOUD_SPEECH_CREDENTIALS = r"""{
   "type": "service_account",
   "project_id": "notcrash-1574485140709",
@@ -11,3 +10,5 @@ GOOGLE_CLOUD_SPEECH_CREDENTIALS = r"""{
   "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
   "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/starting-account-f3msjfp9f1w8%40notcrash-1574485140709.iam.gserviceaccount.com"
 }"""
+
+mongourl = "mongodb+srv://NotCrash:NotCrash@cluster0-e5tfi.mongodb.net/test?retryWrites=true&w=majority"

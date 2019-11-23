@@ -4,9 +4,13 @@
 #speechrecognition
 #google-cloud-speech
 #win32com.client
+#pymongo 
+#dnspython
 import win32com.client as wincl
 import speech_recognition as sr
-from apikey import *
+from connections import *
+import pymongo
+import datetime
 
 # Obtain Audio From Microphone
 def getaudio():
@@ -26,14 +30,10 @@ def processaudio(r,audio):
         print("Could not request results from Google Cloud Speech service; {0}".format(e))
     speak = wincl.Dispatch("SAPI.SpVoice")
     speak.Speak("You said "+sound)
-    for item in sound.split():
-        if item.lower() == 'awake':
-            return("User is Awake")
+    return (str(sound))
 
-def main():
-    r, audio = getaudio()
-    print(processaudio(r, audio))
+    # for item in sound.split():
+    #     if item.lower() == 'awake':
+    #         return("User is Awake")
 
-if __name__ == '__main__':
-    main()
-    
+
