@@ -12,6 +12,7 @@ def getaudio():
         audio = r.listen(source)
     return r,audio
 
+# Use Google Cloud To Process Data
 def processaudio(r,audio):
     try:
         sound = str(r.recognize_google_cloud(audio, credentials_json=GOOGLE_CLOUD_SPEECH_CREDENTIALS))

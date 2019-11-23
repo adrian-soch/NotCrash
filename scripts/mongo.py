@@ -1,5 +1,7 @@
+#Imports
 from voice import *
 
+#Insert Data Into MongoDB
 def runmongo(sound):
     client = pymongo.MongoClient(mongourl)
     db = client.notcrash
@@ -7,10 +9,7 @@ def runmongo(sound):
     time = str(datetime.datetime.now())
     db.distractions.insert_one({"Reason": sound, "Incident": count, "Time": time}) 
 
-def main():
+def insertdata():
     r, audio = getaudio()
     runmongo(processaudio(r, audio))
 
-if __name__ == '__main__':
-    main()
-    

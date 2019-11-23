@@ -13,12 +13,18 @@ def report():
         lis.append(items)
     return lis
 
-
 def sendSMS(cell, lis):
     sms = lib.utils.sms["@1.0.11"]
-    message = 'Your Driving Details Are Below'
+    message = 'Your Driving Details Are Below: \n \n'
     for items in lis:
-        message = '\n' +message + str(items) 
+        message = '\n'*2 + message + str(items) + '\n'*2
     result = sms(to = cell, body = message)
 
-sendSMS("6478702797", report())
+
+def main():
+    insertdata()
+    if (len(report())%1 == 0):
+        sendSMS("6478702797", report())
+
+if __name__ == "__main__":
+    main()
