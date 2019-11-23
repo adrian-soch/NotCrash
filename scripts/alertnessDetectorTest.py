@@ -5,10 +5,10 @@
 # import the necessary packages
 from scipy.spatial import distance as dist
 from imutils import face_utils
-from imutils import VideoStream
+from imutils import video
 from threading import Thread
 import numpy as np
-
+import winsound
 import imutils
 import time
 import dlib
@@ -41,7 +41,7 @@ def eye_aspect_ratio(eye):
 # frames the eye must be below the threshold for to set off the
 # alarm
 EYE_AR_THRESH = 0.3
-EYE_AR_CONSEC_FRAMES = 48
+EYE_AR_CONSEC_FRAMES = 30
 
 # initialize the frame counter as well as a boolean used to
 # indicate if the alarm is going off
@@ -61,7 +61,7 @@ predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
 
 # start the video stream thread
 print("[INFO] starting video stream thread...")
-vs = VideoStream(1).start()
+vs = video.VideoStream(1).start()
 time.sleep(1.0)
 
 # loop over frames from the video stream
@@ -120,6 +120,8 @@ while True:
 					t = Thread(target=alarm)
 					t.deamon = True
 					t.start()
+
+                    
 
 				# draw an alarm on the frame
 				cv2.putText(frame, "DROWSINESS ALERT!", (10, 30),
