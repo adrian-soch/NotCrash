@@ -13,4 +13,4 @@ GOOGLE_CLOUD_SPEECH_CREDENTIALS = r"""{
 
 mongourl = "mongodb+srv://NotCrash:NotCrash@cluster0-e5tfi.mongodb.net/test?retryWrites=true&w=majority"
 
-stdlib = "w0tDBnLpD3i4XrMbDvuvCx7OteOwG-FgZQfniO9GIGKw0fsXvJhZVCxN33cZr1b_"
+stdlib = "tok_dev_X7ZpvMX6qDGoSFG2936WyXqAZGyjooc8hNpQTo8zgDvm3fPgJweEiZasxfjo3AMc"
