@@ -1,18 +1,17 @@
 #Imports
+import pygame, time, pyglet, dlib, cv2, threading, pymongo, datetime
+
 import numpy as np
-import pygame
-import time
-import dlib
-import cv2
-import threading
 import win32com.client as wincl
 import speech_recognition as sr
-import pymongo
-import datetime
+
 from scipy.spatial import distance
 from imutils import face_utils
 from lib import lib
 from smsreport import *
+from textmom import *
+import os
+import winsound
 
 def main():
     #Initialize Pygame and load music
@@ -49,10 +48,8 @@ def main():
     (rStart, rEnd) = face_utils.FACIAL_LANDMARKS_IDXS['right_eye']
 
     #Start webcam video capture
-    video_capture = cv2.VideoCapture(0)
+    video_capture = cv2.VideoCapture(1)
 
-    #Give some time for camera to initialize(not required)
-    time.sleep(2)
 
     while(True):
         #Read each frame and flip it, and convert to grayscale
@@ -101,15 +98,19 @@ def main():
                     pygame.mixer.music.play(-1)
                     ending()
                     COUNTER = 0
+                    pygame.mixer.music.stop()
             
             else:
                 pygame.mixer.music.stop()
                 COUNTER = 0
 
+
+        if(cv2.waitKey(1) & 0xFF == ord('t')):
+            winsound.Beep(1500, 400)
+            textmomplis()
+
         #Show video feed
         cv2.imshow('Video', frame)
-        if(cv2.waitKey(1) & 0xFF == ord('q')):
-            break
 
     #Finally when video capture is over, release the video capture and destroyAllWindows
     video_capture.release()
