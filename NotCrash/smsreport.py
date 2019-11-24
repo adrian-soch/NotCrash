@@ -27,6 +27,6 @@ def sendSMS(cell, lis):
 def ending():
     insertdata()
     if (len(report())%1 == 0):
-        sendSMS("6478702797", report())
+        sendSMS("INSERT PHONE NUMBER", report())
 
 
