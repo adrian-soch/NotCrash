@@ -81,4 +81,4 @@ def textmomplis():
     if (processaudio2(var1,var2,var3) == 0):
         pass
     else:
-        sendSMS2("6472708844", processaudio2(var1,var2,var3))
+        sendSMS2("INSERT PHONE NUMBER", processaudio2(var1,var2,var3))
