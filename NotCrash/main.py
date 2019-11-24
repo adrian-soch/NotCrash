@@ -48,7 +48,7 @@ def main():
     (rStart, rEnd) = face_utils.FACIAL_LANDMARKS_IDXS['right_eye']
 
     #Start webcam video capture
-    video_capture = cv2.VideoCapture(1)
+    video_capture = cv2.VideoCapture(0)
 
 
     while(True):
@@ -104,10 +104,20 @@ def main():
                 pygame.mixer.music.stop()
                 COUNTER = 0
 
+        # We dont talk about the code below
+        ##########################################################################################################################
+        #print("go")
+        #if(cv2.waitKey(1) & 0xFF == ord('e')):
+            #winsound.PlaySound('audio/alert.wav', winsound.SND_ASYNC)
 
         if(cv2.waitKey(1) & 0xFF == ord('t')):
+
             winsound.Beep(1500, 400)
             textmomplis()
+            
+            #threading.Thread(target = playsound, args=('audio/sound.mp3'), daemon=True).start()
+            
+        ##########################################################################################################################
 
         #Show video feed
         cv2.imshow('Video', frame)
