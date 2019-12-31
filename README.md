@@ -5,7 +5,6 @@ A connected vehicle application that brings a new safety system which acts from 
 
 ## Viewing
 - https://devpost.com/software/notcrash
-- https://drive.google.com/file/d/1uLTb3whnHB0406tivO28h33wCUL2futJ/view
 
 
 ## Prerequisites 
