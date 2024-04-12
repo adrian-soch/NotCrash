@@ -1,7 +1,7 @@
 cachetools==3.1.1
 certifi==2023.7.22
 chardet==3.0.4
-dnspython==1.16.0
+dnspython==2.6.1
 google-api-core==1.14.3
 google-api-python-client==1.7.11
 google-auth==1.7.1
